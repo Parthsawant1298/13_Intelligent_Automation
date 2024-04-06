@@ -1,68 +1,47 @@
-import tkinter as tk
-from tkinter import messagebox
-import mysql.connector
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import PorterStemmer
 import gradio as gr
+import mysql.connector
 
-# Download NLTK data (you only need to do this once)
-nltk.download('punkt')
-nltk.download('stopwords')
+# Connect to MySQL database
+conn = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="Nalini2004",
+    database="employee"
+)
 
-# Initialize NLTK components
-stop_words = set(stopwords.words('english'))
-porter = PorterStemmer()
-
-def preprocess_command(command):
-    # Tokenize the command
-    tokens = word_tokenize(command)
-    
-    # Remove stopwords
-    filtered_tokens = [word for word in tokens if word.lower() not in stop_words]
-    
-    # Stem the tokens
-    stemmed_tokens = [porter.stem(word) for word in filtered_tokens]
-    
-    # Join the stemmed tokens back into a command string
-    preprocessed_command = ' '.join(stemmed_tokens)
-    
-    return preprocessed_command
-
-def fetch_data(name):
+def execute_query(query):
     try:
-        # Connect to MySQL database
-        conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="Nalini2004",
-            database="employee"
-        )
-        
         # Execute SQL query
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM employee_data")
+        cursor.execute(query)
         
         # Fetch data
         result = cursor.fetchall()
         
         if result:
-            # Display fetched data
-            messagebox.showinfo("Query Result", f"Data:\n{result}")
+            # Return fetched data
+            return result
         else:
-            messagebox.showinfo("Query Result", "No data found.")
+            return "No data found."
         
         # Close database connection
         cursor.close()
-        conn.close()
     except Exception as e:
-        messagebox.showerror("Error", f"Error executing SQL query: {e}")
+        return f"Error executing SQL query: {e}"
 
-def greet(name):
-    return "Hello " + name + "!"
+def process_command(command):
+    if command.strip().lower() == "retrieve john doe data":
+        query = "SELECT * FROM employee_data WHERE name = 'John Doe'"
+        return execute_query(query)
+    elif command.strip().lower() == "hi":  # Fixed indentation here
+        query = "SELECT * FROM employee_data WHERE name ='Jane Smith'"
+        return execute_query(query)
+    else:
+        return "Command not recognized."
 
-demo = gr.Interface(fn=fetch_data, inputs="textbox", outputs="textbox", title="Greeting Interface", description="Enter your name and click submit to get a greeting message.")
-    
-if __name__ == "__main__":
-    demo.launch()
+def chatbot(command):
+    response = process_command(command)
+    return response
+
+chatbot_interface = gr.Interface(fn=chatbot, inputs="textbox", outputs="textbox", title="Chatbot", description="Type 'retrieve John Doe data' to fetch data for John Doe or 'hi' to fetch data with salary 50000.00.")
+chatbot_interface.launch()
